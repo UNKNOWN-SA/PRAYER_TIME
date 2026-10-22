@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prayer Time — Islamic Productivity</title>
+<meta name="theme-color" content="#060e1e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="fonts/jost-latin-400-normal.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="fonts/cormorant-garamond-latin-600-normal.woff2">
+<link rel="stylesheet" href="fonts.css" onerror="(window.__miss=window.__miss||[]).push(this.getAttribute('href')||this.getAttribute('src'))">
+<link rel="stylesheet" href="style.css" onerror="(window.__miss=window.__miss||[]).push(this.getAttribute('href')||this.getAttribute('src'))">
+<link rel="stylesheet" href="upgrade.css" onerror="(window.__miss=window.__miss||[]).push(this.getAttribute('href')||this.getAttribute('src'))">
+</head>
+<body>
+
+<div class="bgc"></div>
+<div class="bgp"></div>
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<!-- ══════════ LOCATION OVERLAY ══════════ -->
+<div class="loco" id="locO" style="display:none">
+  <div class="locb">
+    <div style="font-size:3rem;margin-bottom:10px">📍</div>
+    <h2>Set Your Location</h2>
+    <p>Prayer times are calculated using your real coordinates via the <strong style="color:var(--gold)">Al-Adhan API</strong> (Muslim World League method — same as Muslim Pro). Stored locally, never shared.</p>
+    <div class="locm">
+      <button class="locbtn pri" onclick="autoGPS()">📡 Auto-Detect My Location (GPS)</button>
+      <div class="locsearch">
+        <input type="text" id="cityIn" placeholder="Search city (e.g. Dhaka, London, Cairo...)"
+               title="Enter city name to search"
+               onkeydown="if(event.key==='Enter') searchCity()"/>
+        <button onclick="searchCity()">Search</button>
+      </div>
+      <div id="cityResults"></div>
+      <div class="madhab-section">
+        <label class="madhab-label" for="madhabSelect">⚖️ Asr Calculation Method (Madhab):</label>
+        <select id="madhabSelect" title="Select your madhab for Asr prayer time calculation" onchange="saveMadhab()">
+          <option value="0">Shafi'i / Maliki / Hanbali (Standard — Earlier Asr)</option>
+          <option value="1">Hanafi (Later Asr)</option>
+        </select>
+        <div class="madhab-note">This affects only Asr prayer time. Hanafi Asr is approximately 30–60 minutes later.</div>
+      </div>
+    </div>
+    <div id="locStatus"></div>
+  </div>
+</div>
+
+<!-- ══════════ LOGIN SCREEN ══════════ -->
+<div id="loginScreen" class="screen active">
+  <div class="lw">
+    <div class="lb">
+      <div class="llogo">
+        <span class="cr" data-logo></span>
+        <h1>Prayer Time</h1>
+        <p>Your Islamic Productivity Companion</p>
+      </div>
+      <!-- Data Loss Warning -->
+      <div class="data-warning">
+        ⚠️ <strong>Important:</strong> All your prayer data is stored in your browser's local storage.
+        <strong>Clearing browser cache or site data will permanently delete all records.</strong>
+        Use the Export feature regularly to back up your data.
+      </div>
+      <div class="ltabs">
+        <div class="ltab active" onclick="switchTab('login')">Sign In</div>
+        <div class="ltab" onclick="switchTab('signup')">Sign Up</div>
+      </div>
+      <!-- Login Form -->
+      <div id="lf">
+        <div class="fg">
+          <label for="le">Email or Username</label>
+          <input type="text" id="le" placeholder="your@email.com" title="Enter your email or username" autocomplete="username"/>
+        </div>
+        <div class="fg">
+          <label for="lp">Password</label>
+          <input type="password" id="lp" placeholder="••••••••" title="Enter your password" autocomplete="current-password"/>
+        </div>
+        <div class="frow">
+          <label><input type="checkbox" id="rm"> Remember me</label>
+          <a href="#">Forgot password?</a>
+        </div>
+        <button class="btn btn-g" onclick="doLogin()">Sign In ✦</button>
+        <div class="dvd">or</div>
+        <button class="btn btn-gh" onclick="guestLogin()">Continue as Guest</button>
+      </div>
+      <!-- Signup Form -->
+      <div id="sf" style="display:none">
+        <div class="fg">
+          <label for="sn">Full Name</label>
+          <input type="text" id="sn" placeholder="Abdullah" title="Enter your full name" autocomplete="name"/>
+        </div>
+        <div class="fg">
+          <label for="se">Email</label>
+          <input type="email" id="se" placeholder="your@email.com" title="Enter your email" autocomplete="email"/>
+        </div>
+        <div class="fg">
+          <label for="sp">Password</label>
+          <input type="password" id="sp" placeholder="••••••••" title="Create a password" autocomplete="new-password"/>
+        </div>
+        <button class="btn btn-g" onclick="doSignup()">Create Account ✦</button>
+        <div class="dvd">or</div>
+        <button class="btn btn-gh" onclick="guestLogin()">Continue as Guest</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ APP SCREEN ══════════ -->
+<div id="appScreen" class="screen">
+
+  <div class="hamburger" onclick="toggleSB()" title="Open menu">☰</div>
+  <div class="sbov" id="sbov" onclick="closeSB()"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sb" id="sb" role="navigation" aria-label="Main navigation">
+    <div class="sblogo">
+      <h2><span class="lg-side" data-logo></span><span class="wm">Prayer Time</span></h2>
+      <p id="sbUser">–</p>
+    </div>
+    <div class="sbscore">
+      <div class="sn" id="sbScore">–</div>
+      <div class="sl">Spiritual Score</div>
+    </div>
+    <div class="sbloc" id="sbLoc" onclick="showLoc()" title="Change location">📍 Set Location</div>
+    <nav>
+      <!-- Collapsible nav group: Main -->
+      <div class="nav-group open" id="ng-main">
+        <div class="nav-group-hdr" onclick="toggleNavGroup('ng-main')">
+          <span>🕌 Main</span><span class="nav-arrow">▾</span>
+        </div>
+        <div class="nav-group-body">
+          <div class="ni active" onclick="go('dashboard',this)"><span class="nic">🏠</span>Dashboard</div>
+          <div class="ni" onclick="go('prayers',this)"><span class="nic">🤲</span>Prayer Tracker</div>
+          <div class="ni" onclick="go('history',this)"><span class="nic">📅</span>History</div>
+          <div class="ni" onclick="go('qaza',this)">
+            <span class="nic">❌</span>Qaza Manager
+            <span class="nbadge" id="qzBadge">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collapsible nav group: Worship -->
+      <div class="nav-group open" id="ng-worship">
+        <div class="nav-group-hdr" onclick="toggleNavGroup('ng-worship')">
+          <span>📿 Worship</span><span class="nav-arrow">▾</span>
+        </div>
+        <div class="nav-group-body">
+          <div class="ni" onclick="go('dhikr',this)"><span class="nic">📿</span>Dhikr Counter</div>
+          <div class="ni" onclick="go('quran',this)"><span class="nic">📖</span>Quran Tracker</div>
+          <div class="ni" onclick="go('qibla',this)"><span class="nic">🧭</span>Qibla Compass</div>
+        </div>
+      </div>
+
+      <!-- Collapsible nav group: Growth -->
+      <div class="nav-group open" id="ng-growth">
+        <div class="nav-group-hdr" onclick="toggleNavGroup('ng-growth')">
+          <span>📊 Growth</span><span class="nav-arrow">▾</span>
+        </div>
+        <div class="nav-group-body">
+          <div class="ni" onclick="go('analytics',this)"><span class="nic">📊</span>Analytics</div>
+          <div class="ni" onclick="go('goals',this)"><span class="nic">🎯</span>Goals</div>
+          <div class="ni" onclick="go('score',this)"><span class="nic">⭐</span>Spiritual Score</div>
+        </div>
+      </div>
+
+      <!-- Collapsible nav group: Special -->
+      <div class="nav-group open" id="ng-special">
+        <div class="nav-group-hdr" onclick="toggleNavGroup('ng-special')">
+          <span>🌙 Special</span><span class="nav-arrow">▾</span>
+        </div>
+        <div class="nav-group-body">
+          <div class="ni" onclick="go('modes',this)"><span class="nic">🌙</span>Special Modes</div>
+        </div>
+      </div>
+
+      <!-- Collapsible nav group: Account -->
+      <div class="nav-group open" id="ng-account">
+        <div class="nav-group-hdr" onclick="toggleNavGroup('ng-account')">
+          <span>👤 Account</span><span class="nav-arrow">▾</span>
+        </div>
+        <div class="nav-group-body">
+          <div class="ni" onclick="go('settings',this)"><span class="nic">⚙️</span>Settings</div>
+          <div class="ni" onclick="exportD()"><span class="nic">💾</span>Export Backup</div>
+          <div class="ni" onclick="importD()"><span class="nic">📤</span>Import Backup</div>
+          <div class="ni" onclick="renameUser()"><span class="nic">✏️</span>Rename Me</div>
+          <div class="ni" onclick="doLogout()"><span class="nic">🚪</span>Logout</div>
+        </div>
+      </div>
+    </nav>
+    <div class="sbb">
+      <button type="button" class="theme-sw" id="themeSw" role="switch" aria-checked="true" aria-label="Dark mode" title="Switch between dark and light mode" onclick="toggleTheme()">
+        <span class="ts-track" aria-hidden="true"><span class="ts-knob" id="thIco">🌙</span></span>
+        <span class="ts-label" id="thLabel">Dark mode</span>
+      </button>
+      <a class="sb-gh" href="https://github.com/UNKNOWN-SA" target="_blank" rel="noopener noreferrer" title="UNKNOWN-SA on GitHub" aria-label="UNKNOWN-SA on GitHub (opens in a new tab)">
+        <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="mn" role="main">
+
+    <!-- ─── DASHBOARD ─── -->
+    <div class="pg active" id="pg-dashboard">
+      <div class="tbar">
+        <div>
+          <h1 id="dashGreet">Assalamu Alaikum 👋</h1>
+          <p id="dashDate" style="color:var(--muted);font-size:.84rem;margin-top:4px"></p>
+        </div>
+        <div class="tbar-r">
+          <div class="ib" onclick="reqNotif()" title="Enable prayer notifications">🔔</div>
+          <div class="ib" onclick="showLoc()" title="Change prayer time location">📍</div>
+        </div>
+      </div>
+
+      <!-- Ramadan Banner -->
+      <div class="ramadan-banner" id="ramadanBanner">
+        <div class="rb-icon">🌙</div>
+        <div>
+          <div class="rb-title">Ramadan Mubarak!</div>
+          <div class="rb-sub">Ramadan Mode is active — enhanced tracking enabled</div>
+        </div>
+      </div>
+
+      <!-- Hero Card -->
+      <div class="hero">
+        <div>
+          <div class="nlbl">Next Prayer</div>
+          <div class="npname" id="nextN">–</div>
+          <div class="nptime" id="nextT">–</div>
+        </div>
+        <div class="cdwrap">
+          <div class="cdnum" id="cdEl">–:–:–</div>
+          <div class="cdsub">Time Remaining</div>
+        </div>
+        <div class="hright">
+          <div class="pring">
+            <svg width="86" height="86" viewBox="0 0 86 86" aria-hidden="true">
+              <circle cx="43" cy="43" r="36" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="8"/>
+              <circle id="hring" cx="43" cy="43" r="36" fill="none" stroke="url(#gr1)"
+                stroke-width="8" stroke-dasharray="226.19" stroke-dashoffset="226.19"
+                stroke-linecap="round"/>
+              <defs>
+                <linearGradient id="gr1" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%"   style="stop-color:#d4a843"/>
+                  <stop offset="100%" style="stop-color:#00b37e"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="prc">
+              <div class="pp" id="heroPct">0%</div>
+              <div class="pl">Today</div>
+            </div>
+          </div>
+          <div class="schip" id="schip">Score: –</div>
+        </div>
+      </div>
+
+      <!-- Sunrise / Sunset Bar -->
+      <div class="sun-row">
+        <div class="sun-item">
+          <span class="sun-icon">🌅</span>
+          <span class="sun-label">Sunrise</span>
+          <span class="sun-val" id="sunriseVal">–</span>
+        </div>
+        <div class="sun-divider"></div>
+        <div class="sun-item">
+          <span class="sun-icon">🌇</span>
+          <span class="sun-label">Sunset</span>
+          <span class="sun-val" id="sunsetVal">–</span>
+        </div>
+      </div>
+
+      <!-- Quote -->
+      <div class="qcard">
+        <div class="qico" aria-hidden="true">❝</div>
+        <div>
+          <div class="qtxt" id="qTxt">Loading...</div>
+          <div class="qsrc" id="qSrc"></div>
+        </div>
+      </div>
+
+      <!-- Today's Prayers -->
+      <div style="font-weight:700;margin-bottom:9px;font-size:.91rem">🕌 Today's Prayers</div>
+      <div class="pbar5" id="dashBar" role="list" aria-label="Today's prayers"></div>
+
+      <!-- Monthly Progress -->
+      <div style="font-weight:700;margin-bottom:9px;font-size:.91rem;margin-top:4px">📅 This Month</div>
+      <div class="card" style="margin-bottom:20px" id="monthProgressWrap"></div>
+
+      <!-- Streaks -->
+      <div style="font-weight:700;margin-bottom:9px;font-size:.91rem">🔥 Streaks</div>
+      <div class="sr4">
+        <div class="sc"><div class="sico">🔥</div><div><div class="snum" id="sFard">0</div><div class="slbl">All Fard</div><div class="sbst" id="bFard">Best: 0</div></div></div>
+        <div class="sc"><div class="sico">🌅</div><div><div class="snum" id="sFajr">0</div><div class="slbl">Fajr Streak</div><div class="sbst" id="bFajr">Best: 0</div></div></div>
+        <div class="sc"><div class="sico">🕌</div><div><div class="snum" id="sMosque">0</div><div class="slbl">Mosque</div><div class="sbst" id="bMosque">Best: 0</div></div></div>
+        <div class="sc"><div class="sico">⏰</div><div><div class="snum" id="sOntime">0</div><div class="slbl">On-Time</div><div class="sbst" id="bOntime">Best: 0</div></div></div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats4">
+        <div class="stc"><div class="stnum" id="stWk">–</div><div class="stlbl">This Week</div></div>
+        <div class="stc"><div class="stnum" id="stMo">–</div><div class="stlbl">This Month</div></div>
+        <div class="stc"><div class="stnum" id="stMs">–</div><div class="stlbl">Mosque Rate</div></div>
+        <div class="stc"><div class="stnum" id="stQz">0</div><div class="stlbl">Qaza Pending</div></div>
+      </div>
+    </div>
+
+    <!-- ─── PRAYER TRACKER ─── -->
+    <div class="pg" id="pg-prayers">
+      <div class="tbar">
+        <h1>🤲 Prayer Tracker</h1>
+        <div class="tbar-r">
+          <input type="date" id="ptDate" title="Select date to track" onchange="renderTracker()"/>
+          <div class="ib" onclick="ptToday()" title="Go to today">📅</div>
+        </div>
+      </div>
+      <div class="info-banner">
+        📊 <b>Score = 100%</b> only when <b>Fard (40pts) + Sunnah Mu'akkada (30pts) + Mosque (20pts) + Witr (10pts, Isha)</b> all done.
+        <b>Asr Sunnah</b> is Nafl — tracked but <b>not counted in score</b>.
+      </div>
+      <div id="trackerList"></div>
+    </div>
+
+    <!-- ─── HISTORY ─── -->
+    <div class="pg" id="pg-history">
+      <div class="tbar">
+        <h1>📅 Prayer History</h1>
+        <div class="tbar-r">
+          <div class="ib" onclick="calPrev()" title="Previous month">‹</div>
+          <span id="calTitle" style="font-family:Cormorant Garamond,'Amiri',serif;font-size:1.1rem;color:var(--gold);min-width:140px;text-align:center"></span>
+          <div class="ib" onclick="calNext()" title="Next month">›</div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="calgrid" id="calGrid" role="grid" aria-label="Prayer history calendar"></div>
+        <div class="calleg">
+          <div class="clitem"><div class="cldot" style="background:rgba(0,179,126,.5)"></div>Full (100%)</div>
+          <div class="clitem"><div class="cldot" style="background:rgba(212,168,67,.5)"></div>Partial</div>
+          <div class="clitem"><div class="cldot" style="background:rgba(220,50,50,.4)"></div>Missed</div>
+          <div class="clitem"><div class="cldot" style="background:rgba(255,255,255,.1)"></div>No data</div>
+        </div>
+      </div>
+      <div id="histDet"></div>
+    </div>
+
+    <!-- ─── ANALYTICS ─── -->
+    <div class="pg" id="pg-analytics">
+      <div class="tbar"><h1>📊 Analytics</h1></div>
+      <div class="ptabs" role="tablist">
+        <button class="ptab active" onclick="setPeriod(7,this)"  role="tab">7 Days</button>
+        <button class="ptab"        onclick="setPeriod(30,this)" role="tab">30 Days</button>
+        <button class="ptab"        onclick="setPeriod(90,this)" role="tab">3 Months</button>
+        <button class="ptab"        onclick="setPeriod(365,this)"role="tab">1 Year</button>
+      </div>
+      <div class="g2">
+        <div class="chcard"><div class="chtitle">Daily Completion %</div><div class="chwrap"><canvas id="cBar" aria-label="Daily completion chart"></canvas></div></div>
+        <div class="chcard"><div class="chtitle">Prayer Distribution</div><div class="chwrap"><canvas id="cPie" aria-label="Prayer distribution chart"></canvas></div></div>
+      </div>
+      <div class="chcard"><div class="chtitle">Progress Trend (with 7-day avg)</div><div class="chwrap"><canvas id="cLine" aria-label="Progress trend chart"></canvas></div></div>
+      <div class="stats4" style="margin-top:16px">
+        <div class="stc"><div class="stnum" id="aFard">–</div><div class="stlbl">Fard Rate</div></div>
+        <div class="stc"><div class="stnum" id="aSun">–</div><div class="stlbl">Sunnah Rate</div></div>
+        <div class="stc"><div class="stnum" id="aMos">–</div><div class="stlbl">Mosque Rate</div></div>
+        <div class="stc"><div class="stnum" id="aKh">–</div><div class="stlbl">Avg Khushu</div></div>
+      </div>
+    </div>
+
+    <!-- ─── DHIKR ─── -->
+    <div class="pg" id="pg-dhikr">
+      <div class="tbar"><h1>📿 Dhikr Counter</h1></div>
+      <div class="dhw">
+        <div class="dhpre" id="dhPre" role="list" aria-label="Dhikr presets"></div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:11px;margin:5px 0">
+          <label for="dhTgt" style="font-size:.81rem;color:var(--muted)">Target:</label>
+          <select id="dhTgt" title="Select dhikr target count" onchange="updDhBar()">
+            <option value="33">33</option>
+            <option value="99">99</option>
+            <option value="100">100</option>
+            <option value="300">300</option>
+            <option value="1000">1000</option>
+          </select>
+        </div>
+        <div class="dhpbar" role="progressbar" aria-label="Dhikr progress">
+          <div class="dhpfill" id="dhBar" style="width:0%"></div>
+        </div>
+        <div class="dhball" onclick="tapDh()" role="button" aria-label="Tap to count dhikr" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')tapDh()">
+          <div class="dhnum" id="dhNum">0</div>
+          <div class="dhsub">Tap to Count</div>
+        </div>
+        <div class="dhacts">
+          <button class="smb" onclick="resetDh()">Reset</button>
+          <button class="smb" onclick="undoDh()">Undo</button>
+          <button class="smb" onclick="saveDhSession()">Save Session</button>
+        </div>
+        <div style="margin-top:20px;text-align:left">
+          <div style="font-weight:700;margin-bottom:9px">Today's Sessions</div>
+          <div id="dhHist"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── QURAN ─── -->
+    <div class="pg" id="pg-quran">
+      <div class="tbar"><h1>📖 Quran Tracker</h1></div>
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:13px">Pages Progress</div>
+          <div class="quran-input-row">
+            <input type="number" id="pgIn" min="1" max="604" placeholder="Pages today" title="Enter number of pages read today"/>
+            <button class="smb" onclick="addPg()">+ Add</button>
+          </div>
+          <div class="quran-meta">
+            <span id="pgRead">0 pages read</span>
+            <span>/ 604 total</span>
+          </div>
+          <div class="pbarw" role="progressbar" aria-label="Quran reading progress">
+            <div class="pbarf" id="pgBar" style="width:0%;background:linear-gradient(90deg,var(--sap),var(--em))"></div>
+          </div>
+          <div class="quran-today">Today: <b id="todPg">0</b> pages</div>
+          <div class="quran-goal-row">
+            Daily Goal: <b id="qGoal">5</b> pages
+            <button class="smb" onclick="setQGoal()" style="padding:3px 9px;font-size:.7rem;margin-left:7px">Edit</button>
+          </div>
+          <div class="quran-reset-note" id="quranResetNote" style="display:none">
+            📖 Almost done! Counter will auto-reset to 0 after page 604 and log a completion.
+          </div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:8px">
+            Completions: <b style="color:var(--gold)" id="qCompletions">0</b>x full Quran
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-weight:700;margin-bottom:7px">
+            Juz Progress <span style="font-size:.72rem;color:var(--muted)">(tap: none → partial → done)</span>
+          </div>
+          <div class="juzgrid" id="juzGrid" role="list" aria-label="30 Juz progress grid"></div>
+        </div>
+      </div>
+      <div class="chcard">
+        <div class="chtitle">30-Day Quran Reading</div>
+        <div class="chwrap"><canvas id="cQuran" aria-label="Quran reading chart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ─── QIBLA ─── -->
+    <div class="pg" id="pg-qibla">
+      <div class="tbar"><h1>🧭 Qibla Compass</h1></div>
+      <div class="card qibla-wrap"><div id="qBody"></div></div>
+    </div>
+
+    <!-- ─── GOALS ─── -->
+    <div class="pg" id="pg-goals">
+      <div class="tbar">
+        <h1>🎯 Goals</h1>
+        <div class="tbar-r">
+          <button onclick="openGoalM()" style="padding:9px 17px;border-radius:10px;background:var(--gold);border:none;color:#000;font-family:'Jost',sans-serif;font-weight:700;cursor:pointer">+ New Goal</button>
+        </div>
+      </div>
+      <div id="goalsList"></div>
+    </div>
+
+    <!-- ─── QAZA ─── -->
+    <div class="pg" id="pg-qaza">
+      <div class="tbar"><h1>❌ Qaza Manager</h1></div>
+      <div class="card" style="margin-bottom:16px;background:rgba(220,50,50,.05);border-color:rgba(220,50,50,.2)">
+        <p style="font-size:.83rem;color:var(--muted);line-height:1.7">
+          Track missed prayers and make them up (Qaza). Total pending: <b style="color:#ff6b6b" id="totQz">0</b>. May Allah make it easy. 🤲
+        </p>
+      </div>
+      <div class="qzgrid" id="qzGrid"></div>
+    </div>
+
+    <!-- ─── SCORE ─── -->
+    <div class="pg" id="pg-score">
+      <div class="tbar"><h1>⭐ Spiritual Score</h1></div>
+      <div class="card score-ring-wrap">
+        <svg width="175" height="175" viewBox="0 0 175 175" style="display:block;margin:0 auto" aria-hidden="true">
+          <circle cx="87.5" cy="87.5" r="76" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="15"/>
+          <circle id="bigRing" cx="87.5" cy="87.5" r="76" fill="none" stroke="url(#sg)"
+            stroke-width="15" stroke-dasharray="477.52" stroke-dashoffset="477.52"
+            stroke-linecap="round" style="transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset 1.2s ease"/>
+          <defs>
+            <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   style="stop-color:#d4a843"/>
+              <stop offset="100%" style="stop-color:#00b37e"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="bnum" id="bigNum">0</div>
+        <div class="bmuted">/ 100 Spiritual Score</div>
+        <div class="bgrade" id="scGrade">–</div>
+      </div>
+      <div class="scinfo">
+        <b>Scoring formula (last 7 days):</b><br>
+        Fard ×35 + On-Time ×20 + Mosque ×20 + Sunnah Mu'akkada ×10 + Quran ×10 + Dhikr ×5<br>
+        <b>Note:</b> Asr Sunnah (Nafl) is not included in the score.
+      </div>
+      <div class="sdgrid">
+        <div class="sdc"><div class="val" id="sdFard">–</div><div class="key">Fard</div></div>
+        <div class="sdc"><div class="val" id="sdOnt">–</div><div class="key">On-Time</div></div>
+        <div class="sdc"><div class="val" id="sdMos">–</div><div class="key">Mosque</div></div>
+        <div class="sdc"><div class="val" id="sdQrn">–</div><div class="key">Quran/day</div></div>
+        <div class="sdc"><div class="val" id="sdDh">–</div><div class="key">Dhikr/day</div></div>
+        <div class="sdc"><div class="val" id="sdSun">–</div><div class="key">Sunnah</div></div>
+      </div>
+    </div>
+
+    <!-- ─── MODES ─── -->
+    <div class="pg" id="pg-modes">
+      <div class="tbar"><h1>🌙 Special Modes</h1></div>
+      <div class="g2">
+        <div class="mcard">
+          <div class="mhdr">
+            <div class="mico">🕌</div>
+            <div><div class="mtitle">Friday Mode</div><div class="msub">Jumu'ah checklist</div></div>
+            <button class="mtbtn" id="fridayBtn" onclick="toggleMode('friday')">Enable</button>
+          </div>
+          <div class="mitems">
+            <div class="mitem"><span>📚 Surah Al-Kahf recitation</span><div class="tsm" id="tm-kahf" onclick="toggleMI('kahf')" role="switch" aria-label="Surah Al-Kahf"></div></div>
+            <div class="mitem"><span>🕌 Jumu'ah prayer attended</span><div class="tsm" id="tm-juma" onclick="toggleMI('juma')" role="switch" aria-label="Jumu'ah prayer"></div></div>
+            <div class="mitem"><span>💚 100x Salawat ﷺ</span><div class="tsm" id="tm-salawat" onclick="toggleMI('salawat')" role="switch" aria-label="Salawat"></div></div>
+            <div class="mitem"><span>🤲 Evening Dua (last hour)</span><div class="tsm" id="tm-dua" onclick="toggleMI('dua')" role="switch" aria-label="Evening Dua"></div></div>
+          </div>
+        </div>
+        <div class="mcard">
+          <div class="mhdr">
+            <div class="mico">🌙</div>
+            <div><div class="mtitle">Ramadan Mode</div><div class="msub">Auto-activates during Ramadan</div></div>
+            <button class="mtbtn" id="ramadanBtn" onclick="toggleMode('ramadan')">Enable</button>
+          </div>
+          <div class="mitems">
+            <div class="mitem"><span>🌙 Fasting today</span><div class="tsm" id="tm-fast" onclick="toggleMI('fast')" role="switch" aria-label="Fasting today"></div></div>
+            <div class="mitem"><span>🌃 Taraweeh prayed</span><div class="tsm" id="tm-taraweeh" onclick="toggleMI('taraweeh')" role="switch" aria-label="Taraweeh prayer"></div></div>
+            <div class="mitem"><span>🌄 Sahoor taken</span><div class="tsm" id="tm-sahoor" onclick="toggleMI('sahoor')" role="switch" aria-label="Sahoor taken"></div></div>
+            <div class="mitem"><span>💝 Charity given today</span><div class="tsm" id="tm-charity" onclick="toggleMI('charity')" role="switch" aria-label="Charity given"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div style="font-weight:700;margin-bottom:11px">📅 Ramadan Days Tracker (tap to mark)</div>
+        <div id="ramDays" style="display:flex;gap:5px;flex-wrap:wrap" role="list" aria-label="Ramadan days"></div>
+      </div>
+    </div>
+
+    <!-- ─── SETTINGS ─── -->
+    <div class="pg" id="pg-settings">
+      <div class="tbar"><h1>⚙️ Settings</h1></div>
+
+      <!-- Madhab Setting -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:14px;font-size:.95rem">⚖️ Asr Prayer Calculation (Madhab)</div>
+        <label for="madhabSelectPage" style="font-size:.83rem;color:var(--muted);display:block;margin-bottom:8px">
+          Select your school of thought for Asr time calculation:
+        </label>
+        <select id="madhabSelectPage" title="Select madhab for Asr calculation" onchange="document.getElementById('madhabSelect').value=this.value;saveMadhab()" style="width:100%;padding:12px">
+          <option value="0">Shafi'i / Maliki / Hanbali — Standard (Earlier Asr)</option>
+          <option value="1">Hanafi — Later Asr</option>
+        </select>
+        <div class="madhab-note" style="margin-top:10px">
+          📌 <b style="color:var(--gold)">Shafi'i / Maliki / Hanbali:</b> Asr begins when the shadow of an object equals its length (1x). Generally earlier.<br>
+          📌 <b style="color:var(--gold)">Hanafi:</b> Asr begins when the shadow equals twice the object's length (2x). Generally 30–60 min later.
+        </div>
+      </div>
+
+      <!-- Data Warning -->
+      <div class="card" style="margin-bottom:16px;background:rgba(220,180,0,.06);border-color:rgba(220,180,0,.3)">
+        <div style="font-weight:700;margin-bottom:10px;font-size:.95rem">💾 Data Storage Warning</div>
+        <div style="font-size:.84rem;color:var(--muted);line-height:1.8">
+          ⚠️ All prayer logs, streaks, goals and Quran progress are stored in your
+          <b style="color:var(--gold)">browser's localStorage</b>.<br>
+          <b style="color:#ff6b6b">Clearing browser cache, site data, or cookies will permanently delete all your data.</b><br>
+          <br>
+          To protect your data:<br>
+          • Use <b style="color:var(--gold)">Export JSON</b> from the sidebar regularly<br>
+          • Save the backup file in a safe location<br>
+          • Use <b style="color:var(--gold)">Import Backup</b> to restore after clearing cache
+        </div>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button onclick="exportD()" style="padding:10px 20px;border-radius:10px;background:var(--gold);border:none;color:#000;font-family:'Jost',sans-serif;font-weight:700;cursor:pointer">💾 Export Now</button>
+          <button onclick="importD()" style="padding:10px 20px;border-radius:10px;background:transparent;border:1px solid var(--bdr);color:var(--txt);font-family:'Jost',sans-serif;font-weight:600;cursor:pointer">📤 Import Backup</button>
+        </div>
+      </div>
+
+      <!-- Theme -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:14px;font-size:.95rem">🎨 Appearance</div>
+        <div class="tr-row">
+          <span style="font-size:.9rem" id="thLabel2">Dark mode</span>
+          <button type="button" class="theme-sw ts-solo" role="switch" aria-checked="true" aria-label="Dark mode" onclick="toggleTheme()"><span class="ts-track" aria-hidden="true"><span class="ts-knob" id="thIco2">🌙</span></span></button>
+        </div>
+      </div>
+
+      <!-- Rename -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:14px;font-size:.95rem">✏️ Change Display Name</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input type="text" id="renameInput" placeholder="Enter new name"
+                 title="Enter new display name"
+                 style="flex:1;padding:10px 12px;border-radius:8px;border:1px solid var(--bdr);background:var(--surf2);color:var(--txt);font-family:'Jost',sans-serif;font-size:.9rem"/>
+          <button onclick="renameFromSettings()" style="padding:10px 18px;border-radius:8px;background:var(--gold);border:none;color:#000;font-family:'Jost',sans-serif;font-weight:700;cursor:pointer;white-space:nowrap">Save Name</button>
+        </div>
+      </div>
+
+      <!-- Notification -->
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:14px;font-size:.95rem">🔔 Notifications</div>
+        <div style="font-size:.84rem;color:var(--muted);margin-bottom:12px">
+          Enable browser notifications to receive prayer time reminders.
+        </div>
+        <button onclick="reqNotif()" style="padding:10px 20px;border-radius:10px;background:var(--em);border:none;color:#fff;font-family:'Jost',sans-serif;font-weight:700;cursor:pointer">Enable Notifications</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- PRAYER DETAIL MODAL -->
+<div class="mo" id="pdMo" role="dialog" aria-modal="true" aria-labelledby="pdTitle">
+  <div class="modal">
+    <div><span class="mclose" onclick="closePD()" aria-label="Close modal">✕</span></div>
+    <h3 id="pdTitle">Prayer Details</h3>
+    <div class="dgrid">
+      <div class="di" id="pd-fard"   onclick="tPD('fard')">🕋 Fard</div>
+      <div class="di" id="pd-sunnah" onclick="tPD('sunnah')">☀️ Sunnah</div>
+      <div class="di" id="pd-mosque" onclick="tPD('mosque')">🕌 Mosque</div>
+      <div class="di" id="pd-ontime" onclick="tPD('ontime')">⏰ On-Time</div>
+    </div>
+    <div id="witrRow" style="display:none;margin-bottom:11px">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:.88rem">
+        <div class="tsm" id="witrT" onclick="tPD('witr')" role="switch" aria-label="Witr completed"></div>
+        Witr completed <span class="witr-badge">Wajib</span>
+      </label>
+    </div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:7px">Khushu Level:</div>
+    <div class="khpick">
+      <div class="kho" onclick="setKh(1)" id="k1">😶 Weak</div>
+      <div class="kho" onclick="setKh(2)" id="k2">🙂 Avg</div>
+      <div class="kho" onclick="setKh(3)" id="k3">😌 Good</div>
+      <div class="kho" onclick="setKh(4)" id="k4">✨ Best</div>
+    </div>
+    <div class="pd-score-info">
+      Prayer Score: <b id="pdScore">0%</b> — Fard(40) + Sunnah(30) + Mosque(20) + Witr(10, Isha) = 100%
+    </div>
+    <div class="macts">
+      <button class="mb mb-gh" onclick="markMissedPD()">Mark Missed</button>
+      <button class="mb mb-g"  onclick="savePD()">Save ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- GOAL MODAL -->
+<div class="mo" id="goalMo" role="dialog" aria-modal="true" aria-labelledby="goalModalTitle">
+  <div class="modal">
+    <div><span class="mclose" onclick="closeGoalM()" aria-label="Close modal">✕</span></div>
+    <h3 id="goalModalTitle">New Spiritual Goal</h3>
+    <div class="fg">
+      <label for="gT">Title</label>
+      <input type="text" id="gT" placeholder="e.g. 40 days Fajr in mosque" title="Enter goal title"/>
+    </div>
+    <div class="fg">
+      <label for="gN">Target Amount</label>
+      <input type="number" id="gN" placeholder="e.g. 40" min="1" title="Enter target number"/>
+    </div>
+    <div class="fg">
+      <label for="gC">Category</label>
+      <select id="gC" title="Select goal category" style="width:100%;padding:12px">
+        <option value="prayer">Prayer</option>
+        <option value="quran">Quran</option>
+        <option value="dhikr">Dhikr</option>
+        <option value="mosque">Mosque</option>
+        <option value="fasting">Fasting</option>
+        <option value="charity">Charity</option>
+      </select>
+    </div>
+    <div class="macts">
+      <button class="mb mb-gh" onclick="closeGoalM()">Cancel</button>
+      <button class="mb mb-g"  onclick="saveGoal()">Create Goal</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="script.js" onerror="(window.__miss=window.__miss||[]).push(this.getAttribute('href')||this.getAttribute('src'))"></script>
+<script src="upgrade.js" onerror="(window.__miss=window.__miss||[]).push(this.getAttribute('href')||this.getAttribute('src'))"></script>
+<script src="noor.js" onerror="(window.__miss=window.__miss||[]).push(this.getAttribute('href')||this.getAttribute('src'))"></script>
+<script src="future.js" onerror="(window.__miss=window.__miss||[]).push(this.getAttribute('href')||this.getAttribute('src'))"></script>
+<script src="world.js" onerror="(window.__miss=window.__miss||[]).push(this.getAttribute('href')||this.getAttribute('src'))"></script>
+<script src="explore.js" onerror="(window.__miss=window.__miss||[]).push(this.getAttribute('href')||this.getAttribute('src'))"></script>
+<script src="adhan.js" onerror="(window.__miss=window.__miss||[]).push(this.getAttribute('href')||this.getAttribute('src'))"></script>
+<script src="icons.js" onerror="(window.__miss=window.__miss||[]).push(this.getAttribute('href')||this.getAttribute('src'))"></script>
+<script>
+addEventListener('load',function(){var m=window.__miss||[];
+if(!m.length)return;var d=document.createElement('div');
+d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#b3261e;color:#fff;font:600 14px/1.5 sans-serif;padding:12px 16px';
+d.textContent='Prayer Time cannot find: '+m.join(', ')+'. Keep ALL files (index.html, fonts.css, the fonts folder, style.css, upgrade.css, script.js, upgrade.js, noor.js, future.js, world.js, explore.js, adhan.js, icons.js) together in the same folder.';
+document.body.appendChild(d)});
+</script>
+</body>
+</html>
