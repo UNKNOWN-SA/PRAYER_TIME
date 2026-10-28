@@ -15,4 +15,7 @@ If adhan-fajr is missing, the regular adhan is used for Fajr. If neither file ex
 
 Only use recordings you have the right to use (for example one from your own mosque, with permission,
 or one released under a licence that allows it).
+
+[WARNING: DON'T USE YOUR ACTUAL E-MAIL/PASSWORD TO LOG IN]
+
 @sami.01269
